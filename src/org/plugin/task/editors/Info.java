@@ -107,6 +107,27 @@ public class Info {
 				this.errorText = "Please, fill all of the alias fields";
 				return false;
 		}
+		if (!this.Memory.containsKey(this.aliases[0])&&this.Memory.containsKey(this.aliases[0])
+				&&this.Memory.containsKey(this.aliases[0])&&this.Memory.containsKey(this.aliases[0]))
+		{
+			this.errorText = "Alias fields must be filled with real memory data";
+			return false;
+		}
+		else 
+		{
+			/*Integer decOrigin = 0;
+			String volume = this.Memory.get(aliases[2])[1];
+			String origin = this.Memory.get(aliases[2])[0];
+			if ((origin.length()>2)&&(origin.charAt(1)=='x'))
+			{
+				decOrigin = Integer.parseInt(origin.substring(2), 16);
+			}
+			else
+			{
+				decOrigin = Integer.parseInt(origin, 10);
+			}
+			Integer decEnd = decOrigin +  * 1024;*/
+		}
 		if ((this.stackTop=="")||(this.endHeap==""))
 		{
 			this.errorText = "Please, fill all of the precharacters fields";
