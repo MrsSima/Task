@@ -1,18 +1,9 @@
 package org.plugin.task.editors;
 
 
-import java.awt.FileDialog;
-import java.io.IOException;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.ArrayList;
 import java.util.HashMap;
-
-import javax.swing.JFrame;
 
 import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.resources.IResourceChangeEvent;
@@ -76,7 +67,7 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 		upperComposite.setLayout(mainLayout);
 		Label titleLabel = new Label(upperComposite, SWT.NONE);
 		titleLabel.setText("Title:");
-		Text titleTF = new Text(upperComposite, SWT.NONE);
+		Text titleText = new Text(upperComposite, SWT.NONE);
 		Label MemoryLabel = new Label(upperComposite, SWT.NONE);
 		MemoryLabel.setText("Memory (name, origin, length):");
 		
@@ -135,6 +126,7 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 		saveButton.setText("Save file");
 
 		Label messageLabel = new Label(saveComposite, SWT.NONE); //TODO delete err text in time
+		messageLabel.setText("");
 		
 		plusButton.addSelectionListener(new SelectionAdapter() 
 		{
@@ -148,30 +140,30 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 	    		memoryTFs.add(new Text[] { name, origin, length });
 			}
 		});
-		
 		saveButton.addSelectionListener(new SelectionAdapter() 
 		{
 			public void widgetSelected(SelectionEvent event) 
 			{
-				if (DataIsCorrect()) 
-				{
 					Info info = CreateInfo();
-					try 
+					if (info.CheckData())
 					{
-						FillAndSaveFile(info);
-					} 
-					catch (Exception ex) 
-					{
-						messageLabel.setText(ex.getMessage());
-						saveComposite.requestLayout();
-						saveComposite.pack();
+						try 
+						{
+							info.setFileText(info.InfoToList());
+							info.SaveFile();
+						} 
+						catch (Exception ex) 
+						{
+							messageLabel.setText(ex.getMessage());
+							saveComposite.layout();
+							saveComposite.pack();
+						}
 					}
-				}
 			}
 			public Info CreateInfo()
 			{
 				Info info = new Info();
-				info.setName(titleTF.getText());
+				info.setName(titleText.getText());
 				info.Memory = new HashMap<String, String[]>();
 				for(Text[] memoryInfo: memoryTFs)
 				{
@@ -179,58 +171,15 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 					String[] originAndLength = new String[] {memoryInfo[1].getText(), memoryInfo[2].getText()};
 					info.Memory.put(name, originAndLength);
 				}
-				info.Aliases = new String[] 
-						{ startupText.getText(), textText.getText(), dataText.getText(), sdataText.getText()};
+				info.setAliases(new String[] 
+						{ startupText.getText(), textText.getText(), dataText.getText(), sdataText.getText()});
 				info.setStackTop(stackTopText.getText());
 				info.setEndHeap(endHeapText.getText());
 				return info;
 			}
-			public boolean DataIsCorrect() 
-			{
-				//TODO
-				return true;		
-			}
-			public void FillAndSaveFile(Info info) 
-			{
-				List<String> result = new ArrayList<String>();
-				//List<String> aliases = new ArrayList<String>();
-				result.add("/* " + info.getName() + " */");
-				result.add("");
-				result.add("MEMORY\r\n{");
-				for(Entry<String, String[]> memoryElement: info.Memory.entrySet())
-				{
-					result.add("\t" + memoryElement.getKey() + " : ORIGIN = " + memoryElement.getValue()[0] + ", LENGTH = " + memoryElement.getValue()[1]);
-				}
-				result.add("}");
-				result.add("");
-				result.add("REGION_ALIAS(\"startup\", " + info.Aliases[0] + ")");
-				result.add("REGION_ALIAS(\"text\", " + info.Aliases[1] + ")");
-				result.add("REGION_ALIAS(\"data\", " + info.Aliases[2] + ")");
-				result.add("REGION_ALIAS(\"sdata\", " + info.Aliases[3] + ")");
-				result.add("");
-				result.add("PROVIDE (__stack_top = (" + info.getStackTop() + " & -4) );");
-				result.add("PROVIDE (__end_heap = (" + info.getStackTop() + ") );");
-				SaveFile(result);
-	    	}
 			
-			public void SaveFile(List<String> result) 
-			{
-				FileDialog fileDialog = new FileDialog(new JFrame(), "Save file", FileDialog.SAVE);
-				fileDialog.setDirectory("C:\\");
-				fileDialog.setVisible(true);
-				// TODO File filter (save *.x files)
-				List<String> lines = result;
-				Path file = Paths.get(fileDialog.getDirectory(), fileDialog.getFile());
-				try 
-				{
-					Files.write(file, lines, Charset.forName("Unicode"));
-				} catch (IOException ex) {
-					messageLabel.setText(ex.getMessage());
-					saveComposite.requestLayout();
-	    			saveComposite.pack();
-				}
-			}
 		});
+		
 		int index = addPage(mainComposite);
 		setPageText(index, "Properties");
 	}
