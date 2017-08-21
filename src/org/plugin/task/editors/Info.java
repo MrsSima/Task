@@ -84,7 +84,17 @@ public class Info {
 			}
 			try
 			{
-				Integer.parseInt(memoryElement.getValue()[0], 16);
+				if ((memoryElement.getValue()[0].length()>2)&&(memoryElement.getValue()[0].charAt(1)=='x'))
+				{
+					Integer.parseInt(memoryElement.getValue()[0].substring(2), 16);
+				}
+				else
+				{
+					Integer decOrigin = Integer.parseInt(memoryElement.getValue()[0], 10);
+					String newOrigin = "0x" + Integer.toHexString(decOrigin);
+					this.Memory.put(memoryElement.getKey(), new String[] { newOrigin, memoryElement.getValue()[1] });
+					
+				}
 			}
 			catch(NumberFormatException nfe)
 			{
@@ -106,12 +116,22 @@ public class Info {
 		{
 			try
 			{
-				Integer.parseInt(this.stackTop, 16);
-				Integer.parseInt(this.endHeap, 16);
+				if ((this.stackTop.length()>2)&&(this.stackTop.charAt(1)=='x'))
+				{
+					Integer.parseInt(this.stackTop.substring(2), 16);
+					Integer.parseInt(this.endHeap.substring(2), 16);
+				}
+				else
+				{
+					Integer DecStackTop = Integer.parseInt(this.stackTop, 10);
+					Integer DecEndHeap = Integer.parseInt(this.endHeap, 10); //TODO endheap check too
+					this.stackTop = "0x" + Integer.toHexString(DecStackTop); //TODO not 0x1 but 0x00000001
+					this.endHeap = "0x" + Integer.toHexString(DecEndHeap);
+				}
 			}
 			catch(NumberFormatException nfe)
 			{
-				this.errorText = "All adresses must be hexadecimal (error in precharacters adresses)";
+				this.errorText = "All adresses must be decimal or hexadecimal (in form like 0x00000000) (error in precharacters adresses)";
 				return false;
 			}
 		}

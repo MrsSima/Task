@@ -72,7 +72,7 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 		memoryLabel.setText("Memory (name, origin, length):"); 
 		Label questionLabel = new Label(memoryLabelComposite, SWT.NONE);
 		questionLabel.setText(" ?"); 
-		questionLabel.setToolTipText("Origin must be in hexadecimal format");
+		questionLabel.setToolTipText("Origin must be in decimal or hexadecimal (like 0x00000000) format");
 		
 		Composite memoryComposite = new Composite(mainComposite, SWT.NONE);
 		GridLayout tripleColumnLayout = new GridLayout(3, false);
@@ -92,8 +92,7 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 		memoryTFs.add(new Text[] { name, origin, length });
 		
 		Composite aliasComposite = new Composite(mainComposite, SWT.NONE); //TODO: Combos
-		GridLayout aliasLayout = new GridLayout(2, false);
-		aliasComposite.setLayout(aliasLayout);
+		aliasComposite.setLayout(doubleColumnLayout);
 		Label startupLabel = new Label(aliasComposite, SWT.NONE);
 		startupLabel.setText("Startup:");
 		Text startupText = new Text(aliasComposite, SWT.NONE);
@@ -118,6 +117,9 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 		Label endHeapLabel = new Label(predefineCharComposite, SWT.NONE);
 		endHeapLabel.setText("__stack_top:");
 		Text endHeapText = new Text(predefineCharComposite, SWT.NONE);
+		Label questionLabel1 = new Label(predefineCharComposite, SWT.NONE);
+		questionLabel1.setText(" ?"); 
+		questionLabel1.setToolTipText("Precharecters must be in decimal or hexadecimal (like 0x00000000) format");
 		// TODO fill when stackTopText is filled
 		
 		Composite saveComposite = new Composite(mainComposite, SWT.NONE);
