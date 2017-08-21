@@ -54,36 +54,38 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 	 */
 	void createPage() 
 	{
-
-		//ScrolledComposite scrolledComposite = new ScrolledComposite(getContainer(), SWT.V_SCROLL);
-        //scrolledComposite.setExpandVertical(true);
         //TODO make page scrollable
 		Composite mainComposite = new Composite(getContainer(), SWT.NONE);
-		GridLayout mainLayout = new GridLayout();
-		mainLayout.numColumns = 1;
-		mainComposite.setLayout(mainLayout);
+		GridLayout oneColumnLayout = new GridLayout(1, false);
+		mainComposite.setLayout(oneColumnLayout);
 		
-		Composite upperComposite = new Composite(mainComposite, SWT.NONE);
-		upperComposite.setLayout(mainLayout);
-		Label titleLabel = new Label(upperComposite, SWT.NONE);
+		Composite titleComposite = new Composite(mainComposite, SWT.NONE);
+		titleComposite.setLayout(oneColumnLayout);
+		Label titleLabel = new Label(titleComposite, SWT.NONE);
 		titleLabel.setText("Title:");
-		Text titleText = new Text(upperComposite, SWT.NONE);
-		Label MemoryLabel = new Label(upperComposite, SWT.NONE);
-		MemoryLabel.setText("Memory (name, origin, length):");
+		Text titleText = new Text(titleComposite, SWT.NONE);
+		
+		Composite memoryLabelComposite = new Composite(mainComposite, SWT.NONE);
+		GridLayout doubleColumnLayout = new GridLayout(2, false);
+		memoryLabelComposite.setLayout(doubleColumnLayout);
+		Label memoryLabel = new Label(memoryLabelComposite, SWT.NONE);
+		memoryLabel.setText("Memory (name, origin, length):"); 
+		Label questionLabel = new Label(memoryLabelComposite, SWT.NONE);
+		questionLabel.setText(" ?"); 
+		questionLabel.setToolTipText("Origin must be in hexadecimal format");
 		
 		Composite memoryComposite = new Composite(mainComposite, SWT.NONE);
-		GridLayout memoryLayout = new GridLayout(3, false);
-		memoryComposite.setLayout(memoryLayout);
+		GridLayout tripleColumnLayout = new GridLayout(3, false);
+		memoryComposite.setLayout(tripleColumnLayout);
 		
-		Composite plusComposite = new Composite(mainComposite, SWT.NONE);
-		plusComposite.setLayout(mainLayout);
-		Button plusButton = new Button(plusComposite, SWT.PUSH);
-		GridData plusGD = new GridData(GridData.CENTER);
-		plusGD.horizontalSpan = 1;
-		plusButton.setLayoutData(plusGD);
+		Composite memoryButtonComposite = new Composite(mainComposite, SWT.NONE);
+		memoryButtonComposite.setLayout(doubleColumnLayout);
+		Button plusButton = new Button(memoryButtonComposite, SWT.PUSH);
 		plusButton.setText("+");
+		//TODO Button minusButton = new Button(memoryButtonComposite, SWT.PUSH);
+		// minusButton.setText("-");
 		
-		List<Text[]> memoryTFs = new ArrayList<Text[]>();
+		List<Text[]> memoryTFs = new ArrayList<Text[]>(); 
 		Text name = new Text(memoryComposite, SWT.NONE);
 		Text origin = new Text(memoryComposite, SWT.NONE);
 		Text length = new Text(memoryComposite, SWT.NONE);
@@ -116,16 +118,17 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 		Label endHeapLabel = new Label(predefineCharComposite, SWT.NONE);
 		endHeapLabel.setText("__stack_top:");
 		Text endHeapText = new Text(predefineCharComposite, SWT.NONE);
+		// TODO fill when stackTopText is filled
 		
 		Composite saveComposite = new Composite(mainComposite, SWT.NONE);
-		saveComposite.setLayout(mainLayout);
+		saveComposite.setLayout(oneColumnLayout);
 		Button saveButton = new Button(saveComposite, SWT.NONE);
 		GridData SaveGD = new GridData(GridData.BEGINNING);
 		SaveGD.horizontalSpan = 1;
 		saveButton.setLayoutData(SaveGD);
 		saveButton.setText("Save file");
 
-		Label messageLabel = new Label(saveComposite, SWT.NONE); //TODO delete err text in time
+		Label messageLabel = new Label(saveComposite, SWT.NONE);
 		messageLabel.setText("");
 		
 		plusButton.addSelectionListener(new SelectionAdapter() 
@@ -144,38 +147,55 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 		{
 			public void widgetSelected(SelectionEvent event) 
 			{
-					Info info = CreateInfo();
-					if (info.CheckData())
+				messageLabel.setText("");
+				saveComposite.layout();
+				saveComposite.pack();
+				
+					try 
 					{
-						try 
+						Info info = CreateInfo();
+						if (info.CheckData())
 						{
+							
 							info.setFileText(info.InfoToList());
 							info.SaveFile();
-						} 
-						catch (Exception ex) 
-						{
-							messageLabel.setText(ex.getMessage());
-							saveComposite.layout();
-							saveComposite.pack();
 						}
+						else 
+						{
+							throw new Exception(info.getErrorText());
+						}
+					} 
+					catch (Exception ex) 
+					{
+						messageLabel.setText(ex.getMessage());
+						saveComposite.layout();
+						saveComposite.pack();
 					}
 			}
+			
 			public Info CreateInfo()
 			{
-				Info info = new Info();
-				info.setName(titleText.getText());
-				info.Memory = new HashMap<String, String[]>();
-				for(Text[] memoryInfo: memoryTFs)
+				try
 				{
-					String name = 	((Text) memoryInfo[0]).getText();
-					String[] originAndLength = new String[] {memoryInfo[1].getText(), memoryInfo[2].getText()};
-					info.Memory.put(name, originAndLength);
-				}
-				info.setAliases(new String[] 
+					Info info = new Info();
+					info.setTitle(titleText.getText());
+					info.Memory = new HashMap<String, String[]>();
+					for(Text[] memoryInfo: memoryTFs)
+					{
+						String name = 	((Text) memoryInfo[0]).getText();
+						String[] originAndLength = new String[] {memoryInfo[1].getText(), memoryInfo[2].getText()};
+						info.Memory.put(name, originAndLength);
+					}
+					info.setAliases(new String[] 
 						{ startupText.getText(), textText.getText(), dataText.getText(), sdataText.getText()});
-				info.setStackTop(stackTopText.getText());
-				info.setEndHeap(endHeapText.getText());
-				return info;
+					info.setStackTop(stackTopText.getText());
+					info.setEndHeap(endHeapText.getText());
+					return info;
+				}
+				catch(Exception ex)
+				{
+					throw ex;
+				}
 			}
 			
 		});

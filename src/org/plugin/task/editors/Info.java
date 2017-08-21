@@ -14,9 +14,12 @@ import javax.swing.JFrame;
 
 public class Info {
 	
-    private String name;
-    public String getName() { return this.name; }
-    public void setName(String name) { this.name = name; }
+    private String title;
+    public String getTitle() { return this.title; }
+    public void setTitle(String title) 
+    { 
+    	this.title = title;
+    }
     
     public Map<String, String[]> Memory;
     
@@ -36,6 +39,9 @@ public class Info {
     public ArrayList<String> getFileText() { return this.fileText; }
     public void setFileText(ArrayList<String> fileText) { this.fileText = fileText; }
     
+    private String errorText;
+    public String getErrorText() {return this.errorText; }
+    
 	public Info() {
 		
 	}
@@ -43,7 +49,7 @@ public class Info {
 	public ArrayList<String> InfoToList()
 	{
 		ArrayList<String> result = new ArrayList<String>();
-		result.add("/* " + this.getName() + " */");
+		result.add("/* " + this.getTitle() + " */");
 		result.add("");
 		result.add("MEMORY\r\n{");
 		for(Entry<String, String[]> memoryElement: this.Memory.entrySet())
@@ -64,26 +70,73 @@ public class Info {
 	
 	public boolean CheckData()
 	{
-		//TODO
+		if (title == "") 
+		{
+			this.errorText = "Please, fill the title field";
+			return false;
+		}
+		for(Entry<String, String[]> memoryElement: this.Memory.entrySet())
+		{
+			if ((memoryElement.getKey()=="")||(memoryElement.getValue()[0]=="")||(memoryElement.getValue()[1]==""))
+			{
+				this.errorText = "Please, fill all of the memory fields";
+				return false;
+			}
+			try
+			{
+				Integer.parseInt(memoryElement.getValue()[0], 16);
+			}
+			catch(NumberFormatException nfe)
+			{
+				this.errorText = "All adresses must be hexadecimal (error in memory adresses)";
+				return false;
+			}
+		}
+		if ((aliases[0]=="")||(aliases[1]=="")||(aliases[2]=="")||(aliases[3]==""))
+		{
+				this.errorText = "Please, fill all of the alias fields";
+				return false;
+		}
+		if ((this.stackTop=="")||(this.endHeap==""))
+		{
+			this.errorText = "Please, fill all of the precharacters fields";
+			return false;
+		}
+		else 
+		{
+			try
+			{
+				Integer.parseInt(this.stackTop, 16);
+				Integer.parseInt(this.endHeap, 16);
+			}
+			catch(NumberFormatException nfe)
+			{
+				this.errorText = "All adresses must be hexadecimal (error in precharacters adresses)";
+				return false;
+			}
+		}
 		return true;
 	}
 	
 	public void SaveFile() 
 	{
 		FileDialog fileDialog = new FileDialog(new JFrame(), "Save file", FileDialog.SAVE);
-		fileDialog.setDirectory("C:\\");
-		fileDialog.setVisible(true);
 		// TODO File filter (save *.x files)
-		//TODO crashes if we just close FileDialog
-		Path file = Paths.get(fileDialog.getDirectory(), fileDialog.getFile());
+		// TODO FileDialog crash!
 		try 
 		{
+			fileDialog.setDirectory("C:\\");
+			fileDialog.setVisible(true);
+			Path file = Paths.get(fileDialog.getDirectory(), fileDialog.getFile());
 			Files.write(file, this.getFileText(), Charset.forName("Unicode"));
 		} 
 		catch (IOException ex) 
 		{
-			//TODO exception
+				this.errorText = "File was not saved: " + ex.getMessage();
+				fileDialog.setVisible(false);
 		}
+		fileDialog.dispose();
 	}
-
 }
+
+
