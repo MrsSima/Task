@@ -91,7 +91,12 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 		plusGD.horizontalSpan = 1;
 		plusButton.setLayoutData(plusGD);
 		plusButton.setText("+");
+		
 		List<Text[]> memoryTFs = new ArrayList<Text[]>();
+		Text name = new Text(memoryComposite, SWT.NONE);
+		Text origin = new Text(memoryComposite, SWT.NONE);
+		Text length = new Text(memoryComposite, SWT.NONE);
+		memoryTFs.add(new Text[] { name, origin, length });
 		
 		Composite aliasComposite = new Composite(mainComposite, SWT.NONE); //TODO: Combos
 		GridLayout aliasLayout = new GridLayout(2, false);
@@ -109,6 +114,18 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 		sdataLabel.setText("Sdata:");
 		Text sdataText = new Text(aliasComposite, SWT.NONE);
 		
+		Composite predefineCharComposite = new Composite(mainComposite, SWT.NONE);
+		GridLayout predefinedCharLayout = new GridLayout(3, false);
+		predefineCharComposite.setLayout(predefinedCharLayout);
+		Label stackTopLabel = new Label(predefineCharComposite, SWT.NONE);
+		stackTopLabel.setText("__end_heap:");
+		Text stackTopText = new Text(predefineCharComposite, SWT.NONE);
+		Label additionalLabel = new Label(predefineCharComposite, SWT.NONE);
+		additionalLabel.setText("&& -4");
+		Label endHeapLabel = new Label(predefineCharComposite, SWT.NONE);
+		endHeapLabel.setText("__stack_top:");
+		Text endHeapText = new Text(predefineCharComposite, SWT.NONE);
+		
 		Composite saveComposite = new Composite(mainComposite, SWT.NONE);
 		saveComposite.setLayout(mainLayout);
 		Button saveButton = new Button(saveComposite, SWT.NONE);
@@ -117,7 +134,7 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 		saveButton.setLayoutData(SaveGD);
 		saveButton.setText("Save file");
 
-		Label messageLabel = new Label(saveComposite, SWT.NONE); //TODO delete err text
+		Label messageLabel = new Label(saveComposite, SWT.NONE); //TODO delete err text in time
 		
 		plusButton.addSelectionListener(new SelectionAdapter() 
 		{
@@ -128,7 +145,6 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 	    		Text length = new Text(memoryComposite, SWT.NONE);
 	    		
 	    		memoryComposite.requestLayout();
-	    		//memoryComposite.pack();
 	    		memoryTFs.add(new Text[] { name, origin, length });
 			}
 		});
@@ -139,15 +155,7 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 			{
 				if (DataIsCorrect()) 
 				{
-					Info info = new Info();
-					info.setName(titleTF.getText());
-					info.Memory = new HashMap<String, String[]>();
-					for(Text[] memoryInfo: memoryTFs)
-					{
-						String name = 	((Text) memoryInfo[0]).getText();
-						String[] originAndLength = new String[] {memoryInfo[1].getText(), memoryInfo[2].getText()};
-						info.Memory.put(name, originAndLength);
-					}
+					Info info = CreateInfo();
 					try 
 					{
 						FillAndSaveFile(info);
@@ -160,7 +168,23 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 					}
 				}
 			}
-			
+			public Info CreateInfo()
+			{
+				Info info = new Info();
+				info.setName(titleTF.getText());
+				info.Memory = new HashMap<String, String[]>();
+				for(Text[] memoryInfo: memoryTFs)
+				{
+					String name = 	((Text) memoryInfo[0]).getText();
+					String[] originAndLength = new String[] {memoryInfo[1].getText(), memoryInfo[2].getText()};
+					info.Memory.put(name, originAndLength);
+				}
+				info.Aliases = new String[] 
+						{ startupText.getText(), textText.getText(), dataText.getText(), sdataText.getText()};
+				info.setStackTop(stackTopText.getText());
+				info.setEndHeap(endHeapText.getText());
+				return info;
+			}
 			public boolean DataIsCorrect() 
 			{
 				//TODO
@@ -179,10 +203,13 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 				}
 				result.add("}");
 				result.add("");
-				result.add("REGION_ALIAS(\"startup\", " + startupText.getText() + ")");
-				result.add("REGION_ALIAS(\"text\", " + textText.getText() + ")");
-				result.add("REGION_ALIAS(\"data\", " + dataText.getText() + ")");
-				result.add("REGION_ALIAS(\"sdata\", " + sdataText.getText() + ")");
+				result.add("REGION_ALIAS(\"startup\", " + info.Aliases[0] + ")");
+				result.add("REGION_ALIAS(\"text\", " + info.Aliases[1] + ")");
+				result.add("REGION_ALIAS(\"data\", " + info.Aliases[2] + ")");
+				result.add("REGION_ALIAS(\"sdata\", " + info.Aliases[3] + ")");
+				result.add("");
+				result.add("PROVIDE (__stack_top = (" + info.getStackTop() + " & -4) );");
+				result.add("PROVIDE (__end_heap = (" + info.getStackTop() + ") );");
 				SaveFile(result);
 	    	}
 			

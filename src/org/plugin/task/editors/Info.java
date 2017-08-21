@@ -10,7 +10,15 @@ public class Info {
     
     public Map<String, String[]> Memory;
     
-    public Map<String, String> Aliases;
+    public String[] Aliases;
+    
+    private String endHeap;
+    public String getEndHeap() { return this.endHeap; }
+    public void setEndHeap(String endHeap) { this.endHeap = endHeap; }
+    
+    private String stackTop;
+    public String getStackTop() { return this.stackTop; }
+    public void setStackTop(String stackTop) { this.stackTop = stackTop; }
     
 	public Info() {
 		
