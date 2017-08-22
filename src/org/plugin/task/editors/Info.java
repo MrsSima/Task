@@ -1,16 +1,17 @@
 package org.plugin.task.editors;
 
-import java.awt.FileDialog;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import javax.swing.JFrame;
+import org.eclipse.swt.widgets.FileDialog;
 
 public class Info {
 	
@@ -29,9 +30,9 @@ public class Info {
     public String sdataAlias;
     public String[] getAliases() { return new String[] 
     		{this.startupAlias, this.textAlias, this.dataAlias, this.sdataAlias  }; }
-  /// <summary>
-  /// Takes String[] {startup, text, data, sdata} //TODO
-  /// </summary>
+    /*
+     * Takes String[] { startup, text, data, sdata }
+     */
     public void setAliases(String[] aliases) 
     { 
     	this.startupAlias = aliases[0]; 
@@ -137,13 +138,34 @@ public class Info {
 				}
 				//is length format right?
 				String currentLength = memoryElement.getValue()[1];
-				if ((Character.toUpperCase(currentLength.charAt(currentLength.length()-1))!='K')
-						&&(Character.toUpperCase(currentLength.charAt(currentLength.length()-1))!='M'))
+				Character memoryUnit = currentLength.charAt(currentLength.length()-1);
+				List<Character> memoryUnits = Arrays.asList('g', 'G', 'm', 'M', 'k', 'K', 'Ì', 'ê', 'Ê', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9');
+				if (!memoryUnits.contains(memoryUnit)) 
 						
 				{
 					this.errorText = 
-							"Wrong memory length unit. Length must be specified as K (kilobites) or M (megabytes)";
+							"Wrong memory length unit. Length must be not specified, or "
+							+ "specified as K (kilobites), M (megabyte) or G (gigabyte)";
 					return false;
+				}
+				else 
+				{
+					if ((Arrays.asList( 'g', 'G' )).contains(memoryUnit))
+					{
+						currentLength = currentLength.substring(0, currentLength.length()-1) + "G";
+					}
+					else if ((Arrays.asList( 'm', 'M', 'Ì' )).contains(memoryUnit))
+					{
+						currentLength = currentLength.substring(0, currentLength.length()-1) + "M";
+					}
+					else if ((Arrays.asList('k', 'K', 'ê', 'Ê' )).contains(memoryUnit))
+					{
+						currentLength = currentLength.substring(0, currentLength.length()-1) + "K";
+					}
+					else
+					{
+						currentLength = currentLength + "B";
+					}
 				}
 				try 
 				{
@@ -202,10 +224,14 @@ public class Info {
 					String memoryLengthString = this.Memory.get(this.dataAlias)[1];
 					switch (Character.toUpperCase(memoryLengthString.charAt(memoryLengthString.length()-1)))
 					{
+						case 'B': memoryUnits = 1;
+	  		  				      break;
 						case 'K': memoryUnits = 1024;
 								  break;
 						case 'M': memoryUnits = 1024*1024;
 						  		  break;
+						case 'G': memoryUnits = 1024*1024*1024;
+				  		  		  break;
 					}
 					memoryLength =  
 							Long.parseLong(memoryLengthString.substring(0, memoryLengthString.length()-1)) * memoryUnits;
@@ -269,20 +295,17 @@ public class Info {
 	
 	public void SaveFile() 
 	{
-		FileDialog fileDialog = new FileDialog(new JFrame(), "Save file", FileDialog.SAVE);
-		// TODO FileDialog crash!
+		FileDialog fileDialog = new FileDialog(org.eclipse.swt.widgets.Display.getCurrent().getActiveShell(),
+				org.eclipse.swt.SWT.SAVE); 
 		try 
-		{
-			fileDialog.setDirectory(System.getProperty("user.home"));
-			fileDialog.setVisible(true);
-			Path file = Paths.get(fileDialog.getDirectory(), fileDialog.getFile());
-			Files.write(file, this.getFileText(), Charset.forName("Unicode"));
+		{ 
+			Path file = Paths.get(fileDialog.open()); 
+			Files.write(file, this.getFileText(), Charset.forName("Unicode")); 
 		} 
 		catch (IOException ex) 
-		{
-				this.errorText = "File was not saved: " + ex.getMessage();
-		}
-		//frame.setVisible(false);
+		{ 
+			this.errorText = "File was not saved: " + ex.getMessage(); 
+		} 
 	}
 }
 
