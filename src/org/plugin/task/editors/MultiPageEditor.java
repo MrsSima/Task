@@ -152,10 +152,10 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 				messageLabel.setText("");
 				saveComposite.layout();
 				saveComposite.pack();
-				
+				Info info = new Info();
 					try 
 					{
-						Info info = CreateInfo();
+						info = CreateInfo();
 						if (info.CheckData())
 						{
 							
@@ -169,7 +169,15 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 					} 
 					catch (Exception ex) 
 					{
-						messageLabel.setText(ex.getMessage());
+						if (info.getErrorText()!="")
+						{
+							messageLabel.setText(info.getErrorText());
+							info.clearErrorText();
+						}
+						else
+						{
+							messageLabel.setText(ex.getMessage());
+						}
 						saveComposite.layout();
 						saveComposite.pack();
 					}
@@ -185,11 +193,13 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 					for(Text[] memoryInfo: memoryTFs)
 					{
 						String name = 	((Text) memoryInfo[0]).getText();
-						String[] originAndLength = new String[] {memoryInfo[1].getText(), memoryInfo[2].getText()};
+						String[] originAndLength = new String[] 
+								{memoryInfo[1].getText(), memoryInfo[2].getText()};
 						info.Memory.put(name, originAndLength);
 					}
 					info.setAliases(new String[] 
-						{ startupText.getText(), textText.getText(), dataText.getText(), sdataText.getText()});
+						{ startupText.getText(), textText.getText(), 
+								dataText.getText(), sdataText.getText()});
 					info.setStackTop(stackTopText.getText());
 					info.setEndHeap(endHeapText.getText());
 					return info;
