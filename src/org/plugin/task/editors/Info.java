@@ -29,7 +29,9 @@ public class Info {
     public String sdataAlias;
     public String[] getAliases() { return new String[] 
     		{this.startupAlias, this.textAlias, this.dataAlias, this.sdataAlias  }; }
-  // TODO summary for params priority
+  /// <summary>
+  /// Takes String[] {startup, text, data, sdata} //TODO
+  /// </summary>
     public void setAliases(String[] aliases) 
     { 
     	this.startupAlias = aliases[0]; 
@@ -279,9 +281,8 @@ public class Info {
 		catch (IOException ex) 
 		{
 				this.errorText = "File was not saved: " + ex.getMessage();
-				fileDialog.setVisible(false);
 		}
-		fileDialog.dispose();
+		//frame.setVisible(false);
 	}
 }
 

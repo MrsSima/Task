@@ -11,11 +11,16 @@ import org.eclipse.core.resources.IResourceChangeListener;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.FocusEvent;
+import org.eclipse.swt.events.FocusListener;
+import org.eclipse.swt.events.ModifyEvent;
+import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
@@ -50,7 +55,7 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 		ResourcesPlugin.getWorkspace().addResourceChangeListener(this);
 	}
 	/**
-	 * Creates page wich allows you to fill processor data and save it
+	 * Creates page witch allows you to fill processor data and save it
 	 */
 	void createPage() 
 	{
@@ -59,12 +64,15 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 		GridLayout oneColumnLayout = new GridLayout(1, false);
 		mainComposite.setLayout(oneColumnLayout);
 		
+		
+		//Title
 		Composite titleComposite = new Composite(mainComposite, SWT.NONE);
 		titleComposite.setLayout(oneColumnLayout);
 		Label titleLabel = new Label(titleComposite, SWT.NONE);
 		titleLabel.setText("Title:");
 		Text titleText = new Text(titleComposite, SWT.NONE);
 		
+		//Memory Label
 		Composite memoryLabelComposite = new Composite(mainComposite, SWT.NONE);
 		GridLayout doubleColumnLayout = new GridLayout(2, false);
 		memoryLabelComposite.setLayout(doubleColumnLayout);
@@ -74,10 +82,17 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 		questionLabel.setText(" ?"); 
 		questionLabel.setToolTipText("Origin must be in decimal or hexadecimal (like 0x00000000) format");
 		
+		//Memory fields
 		Composite memoryComposite = new Composite(mainComposite, SWT.NONE);
 		GridLayout tripleColumnLayout = new GridLayout(3, false);
 		memoryComposite.setLayout(tripleColumnLayout);
+		List<Text[]> memoryTFs = new ArrayList<Text[]>(); 
+		Text name = new Text(memoryComposite, SWT.NONE);
+		Text origin = new Text(memoryComposite, SWT.NONE);
+		Text length = new Text(memoryComposite, SWT.NONE);
+		memoryTFs.add(new Text[] { name, origin, length });
 		
+		//Plus button
 		Composite memoryButtonComposite = new Composite(mainComposite, SWT.NONE);
 		memoryButtonComposite.setLayout(doubleColumnLayout);
 		Button plusButton = new Button(memoryButtonComposite, SWT.PUSH);
@@ -85,43 +100,43 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 		//TODO Button minusButton = new Button(memoryButtonComposite, SWT.PUSH);
 		// minusButton.setText("-");
 		
-		List<Text[]> memoryTFs = new ArrayList<Text[]>(); 
-		Text name = new Text(memoryComposite, SWT.NONE);
-		Text origin = new Text(memoryComposite, SWT.NONE);
-		Text length = new Text(memoryComposite, SWT.NONE);
-		memoryTFs.add(new Text[] { name, origin, length });
-		
-		Composite aliasComposite = new Composite(mainComposite, SWT.NONE); //TODO: Combos
-		aliasComposite.setLayout(doubleColumnLayout);
+		//Aliases
+		Composite aliasComposite = new Composite(mainComposite, SWT.NONE); 
+		aliasComposite.setLayout(doubleColumnLayout);		
 		Label startupLabel = new Label(aliasComposite, SWT.NONE);
 		startupLabel.setText("Startup:");
-		Text startupText = new Text(aliasComposite, SWT.NONE);
+		Combo startupCombo = new Combo(aliasComposite, SWT.DRAG | SWT.ARROW_DOWN | SWT.READ_ONLY);
+		startupCombo.addFocusListener(setComboListener(startupCombo, aliasComposite, memoryTFs));
 		Label textLabel = new Label(aliasComposite, SWT.NONE);
 		textLabel.setText("Text:");
-		Text textText = new Text(aliasComposite, SWT.NONE);
+		Combo textCombo = new Combo(aliasComposite, SWT.DRAG | SWT.ARROW_DOWN | SWT.READ_ONLY);
+		textCombo.addFocusListener(setComboListener(textCombo, aliasComposite, memoryTFs));	
 		Label dataLabel = new Label(aliasComposite, SWT.NONE);
 		dataLabel.setText("Data:");
-		Text dataText = new Text(aliasComposite, SWT.NONE);
+		Combo dataCombo = new Combo(aliasComposite, SWT.DRAG | SWT.ARROW_DOWN | SWT.READ_ONLY);
+		dataCombo.addFocusListener(setComboListener(dataCombo, aliasComposite, memoryTFs));	
 		Label sdataLabel = new Label(aliasComposite, SWT.NONE);
 		sdataLabel.setText("Sdata:");
-		Text sdataText = new Text(aliasComposite, SWT.NONE);
+		Combo sdataCombo = new Combo(aliasComposite, SWT.DRAG | SWT.ARROW_DOWN | SWT.READ_ONLY);
+		sdataCombo.addFocusListener(setComboListener(sdataCombo, aliasComposite, memoryTFs));
 		
+		//Predefined characters
 		Composite predefineCharComposite = new Composite(mainComposite, SWT.NONE);
 		GridLayout predefinedCharLayout = new GridLayout(3, false);
 		predefineCharComposite.setLayout(predefinedCharLayout);
 		Label stackTopLabel = new Label(predefineCharComposite, SWT.NONE);
 		stackTopLabel.setText("__end_heap:");
-		Text stackTopText = new Text(predefineCharComposite, SWT.NONE);
+		Text stackTopText = new Text(predefineCharComposite, SWT.NONE);		  
 		Label additionalLabel = new Label(predefineCharComposite, SWT.NONE);
 		additionalLabel.setText("&& -4");
 		Label endHeapLabel = new Label(predefineCharComposite, SWT.NONE);
 		endHeapLabel.setText("__stack_top:");
 		Text endHeapText = new Text(predefineCharComposite, SWT.NONE);
 		Label questionLabel1 = new Label(predefineCharComposite, SWT.NONE);
-		questionLabel1.setText(" ?"); 
-		questionLabel1.setToolTipText("Precharecters must be in decimal or hexadecimal (like 0x00000000) format");
-		// TODO fill when stackTopText is filled
+		questionLabel1.setText(" ?");
+		questionLabel1.setToolTipText("Precharecters must be in decimal or hexadecimal (like 0x00000000) format");	
 		
+		//Save button & message label
 		Composite saveComposite = new Composite(mainComposite, SWT.NONE);
 		saveComposite.setLayout(oneColumnLayout);
 		Button saveButton = new Button(saveComposite, SWT.NONE);
@@ -129,10 +144,10 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 		SaveGD.horizontalSpan = 1;
 		saveButton.setLayoutData(SaveGD);
 		saveButton.setText("Save file");
-
 		Label messageLabel = new Label(saveComposite, SWT.NONE);
 		messageLabel.setText("");
 		
+		//Listeners
 		plusButton.addSelectionListener(new SelectionAdapter() 
 		{
 			public void widgetSelected(SelectionEvent event) 
@@ -144,7 +159,16 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 	    		memoryComposite.requestLayout();
 	    		memoryTFs.add(new Text[] { name, origin, length });
 			}
-		});
+		});		
+		stackTopText.addModifyListener(new ModifyListener() 
+		{
+			public void modifyText(ModifyEvent arg0) 
+			{
+				endHeapText.setText(stackTopText.getText());
+				saveComposite.layout();
+				saveComposite.pack(); 
+			}
+		});		
 		saveButton.addSelectionListener(new SelectionAdapter() 
 		{
 			public void widgetSelected(SelectionEvent event) 
@@ -198,8 +222,8 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 						info.Memory.put(name, originAndLength);
 					}
 					info.setAliases(new String[] 
-						{ startupText.getText(), textText.getText(), 
-								dataText.getText(), sdataText.getText()});
+						{ startupCombo.getText(), textCombo.getText(), 
+								dataCombo.getText(), sdataCombo.getText()});
 					info.setStackTop(stackTopText.getText());
 					info.setEndHeap(endHeapText.getText());
 					return info;
@@ -213,22 +237,30 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 		});
 		
 		int index = addPage(mainComposite);
-		setPageText(index, "Properties");
+		setPageText(index, "Task");
 	}
-	/** 
-	 * Gets memory names for alias comboboxes (for now: no comboboxes so no method)
-	 
-	private String[] GetMemories(List<Text[]> memoryTFs)
+	
+	private FocusListener setComboListener(Combo combo, Composite combocomposite, List<Text[]> memoryTFs)
 	{
-		String[] result = new String[memoryTFs.size()];
-		int i = 0;
-		for(Text[] memoryInfo: memoryTFs)
-		{
-			result[i] = memoryInfo[0].getText();
-		}
-		return result;
+		FocusListener comboListener = new FocusListener() {
+		      public void focusGained(FocusEvent e) {
+		    	  combo.removeAll();
+		    	  for (Text[] memoryInfo: memoryTFs)
+		    	  {
+		    		    String name = memoryInfo[0].getText();
+						combo.add(name); 
+						combocomposite.layout();
+						combocomposite.pack();
+		    	  }
+		      }
+
+			@Override
+			public void focusLost(FocusEvent e) {				
+			}
+		};
+		return comboListener;
 	}
-	*/
+	
 	/**
 	 * Creates the pages of the multi-page editor.
 	 */
