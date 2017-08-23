@@ -2,6 +2,7 @@ package org.plugin.task.editors;
 
 
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -17,7 +18,6 @@ import org.eclipse.swt.events.ModifyEvent;
 import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
-import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Combo;
@@ -62,19 +62,40 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
         //TODO make page scrollable
 		Composite mainComposite = new Composite(getContainer(), SWT.NONE);
 		GridLayout oneColumnLayout = new GridLayout(1, false);
+		GridLayout doubleColumnLayout = new GridLayout(2, false);
+		GridLayout tripleColumnLayout = new GridLayout(3, false);
 		mainComposite.setLayout(oneColumnLayout);
-		
 		
 		//Title
 		Composite titleComposite = new Composite(mainComposite, SWT.NONE);
 		titleComposite.setLayout(oneColumnLayout);
+		Button loadButton = new Button(titleComposite, SWT.NONE);
+		loadButton.setText("Load from file");
+		loadButton.setToolTipText("Works for UNICODE files in form like:\r\n "
+				+ "/* ARC AXS102 SDP - HS34 */\r\n" + 
+				"\r\n" + 
+				"MEMORY\r\n" + 
+				"{\r\n" + 
+				"    MBRAM : ORIGIN = 0x00000000, LENGTH = 256K\r\n" + 
+				"    ICCM  : ORIGIN = 0x10000000, LENGTH = 64K\r\n" + 
+				"    SRAM  : ORIGIN = 0x20000000, LENGTH = 256K\r\n" + 
+				"    DRAM  : ORIGIN = 0x80000000, LENGTH = 1024M\r\n" + 
+				"    DCCM  : ORIGIN = 0xC0000000, LENGTH = 64K\r\n" + 
+				"}\r\n" + 
+				"\r\n" + 
+				"REGION_ALIAS(\"startup\", MBRAM)\r\n" + 
+				"REGION_ALIAS(\"text\", ICCM)\r\n" + 
+				"REGION_ALIAS(\"data\", DCCM)\r\n" + 
+				"REGION_ALIAS(\"sdata\", DCCM)\r\n" + 
+				"\r\n" + 
+				"PROVIDE (__stack_top = (0xBFFFFFFF & -4) );\r\n" + 
+				"PROVIDE (__end_heap = (0xBFFFFFFF) );");
 		Label titleLabel = new Label(titleComposite, SWT.NONE);
 		titleLabel.setText("Title:");
 		Text titleText = new Text(titleComposite, SWT.NONE);
 		
 		//Memory Label
 		Composite memoryLabelComposite = new Composite(mainComposite, SWT.NONE);
-		GridLayout doubleColumnLayout = new GridLayout(2, false);
 		memoryLabelComposite.setLayout(doubleColumnLayout);
 		Label memoryLabel = new Label(memoryLabelComposite, SWT.NONE);
 		memoryLabel.setText("Memory (name, origin, length):"); 
@@ -84,7 +105,6 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 		
 		//Memory fields
 		Composite memoryComposite = new Composite(mainComposite, SWT.NONE);
-		GridLayout tripleColumnLayout = new GridLayout(3, false);
 		memoryComposite.setLayout(tripleColumnLayout);
 		List<Text[]> memoryTFs = new ArrayList<Text[]>(); 
 		Text name = new Text(memoryComposite, SWT.NONE);
@@ -97,8 +117,8 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 		memoryButtonComposite.setLayout(doubleColumnLayout);
 		Button plusButton = new Button(memoryButtonComposite, SWT.PUSH);
 		plusButton.setText("+");
-		//TODO Button minusButton = new Button(memoryButtonComposite, SWT.PUSH);
-		// minusButton.setText("-");
+		Button minusButton = new Button(memoryButtonComposite, SWT.PUSH);
+		minusButton.setText("-");
 		
 		//Aliases
 		Composite aliasComposite = new Composite(mainComposite, SWT.NONE); 
@@ -106,24 +126,19 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 		Label startupLabel = new Label(aliasComposite, SWT.NONE);
 		startupLabel.setText("Startup:");
 		Combo startupCombo = new Combo(aliasComposite, SWT.DRAG | SWT.ARROW_DOWN | SWT.READ_ONLY);
-		startupCombo.addFocusListener(setComboListener(startupCombo, aliasComposite, memoryTFs));
 		Label textLabel = new Label(aliasComposite, SWT.NONE);
 		textLabel.setText("Text:");
-		Combo textCombo = new Combo(aliasComposite, SWT.DRAG | SWT.ARROW_DOWN | SWT.READ_ONLY);
-		textCombo.addFocusListener(setComboListener(textCombo, aliasComposite, memoryTFs));	
+		Combo textCombo = new Combo(aliasComposite, SWT.DRAG | SWT.ARROW_DOWN | SWT.READ_ONLY);	
 		Label dataLabel = new Label(aliasComposite, SWT.NONE);
 		dataLabel.setText("Data:");
-		Combo dataCombo = new Combo(aliasComposite, SWT.DRAG | SWT.ARROW_DOWN | SWT.READ_ONLY);
-		dataCombo.addFocusListener(setComboListener(dataCombo, aliasComposite, memoryTFs));	
+		Combo dataCombo = new Combo(aliasComposite, SWT.DRAG | SWT.ARROW_DOWN | SWT.READ_ONLY);	
 		Label sdataLabel = new Label(aliasComposite, SWT.NONE);
 		sdataLabel.setText("Sdata:");
 		Combo sdataCombo = new Combo(aliasComposite, SWT.DRAG | SWT.ARROW_DOWN | SWT.READ_ONLY);
-		sdataCombo.addFocusListener(setComboListener(sdataCombo, aliasComposite, memoryTFs));
 		
 		//Predefined characters
 		Composite predefineCharComposite = new Composite(mainComposite, SWT.NONE);
-		GridLayout predefinedCharLayout = new GridLayout(3, false);
-		predefineCharComposite.setLayout(predefinedCharLayout);
+		predefineCharComposite.setLayout(tripleColumnLayout);
 		Label stackTopLabel = new Label(predefineCharComposite, SWT.NONE);
 		stackTopLabel.setText("__end_heap:");
 		Text stackTopText = new Text(predefineCharComposite, SWT.NONE);		  
@@ -140,14 +155,80 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 		Composite saveComposite = new Composite(mainComposite, SWT.NONE);
 		saveComposite.setLayout(oneColumnLayout);
 		Button saveButton = new Button(saveComposite, SWT.NONE);
-		GridData SaveGD = new GridData(GridData.BEGINNING);
-		SaveGD.horizontalSpan = 1;
-		saveButton.setLayoutData(SaveGD);
+		//GridData SaveGD = new GridData(GridData.BEGINNING);
+		//SaveGD.horizontalSpan = 1;
+		//saveButton.setLayoutData(SaveGD);
 		saveButton.setText("Save file");
 		Label messageLabel = new Label(saveComposite, SWT.NONE);
 		messageLabel.setText("");
 		
 		//Listeners
+		loadButton.addSelectionListener(new SelectionAdapter() 
+		{
+			public void widgetSelected(SelectionEvent event) 
+			{
+	    		Info info = new Info();
+	    		try 
+	    		{
+	    			info.CreateFromFile();
+	    			clearPage();
+	    			fillPage(info);
+	    			
+	    		}
+	    		catch(Exception ex)
+	    		{
+	    			if (info.getErrorText()!="")
+					{
+						messageLabel.setText(info.getErrorText());
+						info.clearErrorText();
+					}
+					else
+					{
+						messageLabel.setText("Load failed: " + ex.getMessage());
+					}
+	    		}
+			}
+			private void clearPage()
+			{
+				for(Text[] element: memoryTFs)
+	    		{
+	    			element[0].dispose();
+	    			element[1].dispose();
+	    			element[2].dispose();
+	    		}
+				memoryTFs.clear();
+				startupCombo.removeAll();
+				textCombo.removeAll();
+				dataCombo.removeAll();
+				sdataCombo.removeAll();
+			}
+			private void fillPage(Info info)
+			{
+				//TODO
+				titleText.setText(info.getTitle());
+				for(Entry<String, String[]> memoryElement: info.Memory.entrySet())
+				{
+					Text name = new Text(memoryComposite, SWT.NONE);
+		    		Text origin = new Text(memoryComposite, SWT.NONE);
+		    		Text length = new Text(memoryComposite, SWT.NONE);
+					name.setText(memoryElement.getKey());
+					origin.setText(memoryElement.getValue()[0]);
+					length.setText(memoryElement.getValue()[1]);
+		    		memoryTFs.add(new Text[] { name, origin, length });
+				}
+				startupCombo.add(info.getStartupAlias());
+				startupCombo.select(0);
+				textCombo.add(info.getTextAlias());
+				textCombo.select(0);
+				dataCombo.add(info.getDataAlias());
+				dataCombo.select(0);
+				sdataCombo.add(info.getSdataAlias());
+				sdataCombo.select(0);
+				stackTopText.setText(info.getStackTop());
+	    		mainComposite.layout();
+				mainComposite.pack();
+			}
+		});		
 		plusButton.addSelectionListener(new SelectionAdapter() 
 		{
 			public void widgetSelected(SelectionEvent event) 
@@ -158,8 +239,29 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 	    		
 	    		memoryComposite.requestLayout();
 	    		memoryTFs.add(new Text[] { name, origin, length });
+	    		minusButton.setVisible(true);
 			}
 		});		
+		minusButton.addSelectionListener(new SelectionAdapter() 
+		{
+			public void widgetSelected(SelectionEvent event) 
+			{	
+				if (memoryTFs.size()>0)
+				{
+		    		Text[] lastMemoryInfo = memoryTFs.get(memoryTFs.size()-1);
+		    		for(Text element: lastMemoryInfo)
+		    		{
+		    			element.dispose();
+		    		}
+		    		memoryTFs.remove(memoryTFs.size()-1);
+		    		memoryComposite.requestLayout();
+				}
+				if (memoryTFs.size()==0)
+				{
+					minusButton.setVisible(false);
+				}
+			}
+		});	
 		stackTopText.addModifyListener(new ModifyListener() 
 		{
 			public void modifyText(ModifyEvent arg0) 
@@ -221,9 +323,8 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 								{memoryInfo[1].getText(), memoryInfo[2].getText()};
 						info.Memory.put(name, originAndLength);
 					}
-					info.setAliases(new String[] 
-						{ startupCombo.getText(), textCombo.getText(), 
-								dataCombo.getText(), sdataCombo.getText()});
+					info.setAliases(startupCombo.getText(), textCombo.getText(), 
+								dataCombo.getText(), sdataCombo.getText());
 					info.setStackTop(stackTopText.getText());
 					info.setEndHeap(endHeapText.getText());
 					return info;
@@ -235,6 +336,10 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 			}
 			
 		});
+		startupCombo.addFocusListener(setComboListener(startupCombo, aliasComposite, memoryTFs));
+		textCombo.addFocusListener(setComboListener(textCombo, aliasComposite, memoryTFs));	
+		dataCombo.addFocusListener(setComboListener(dataCombo, aliasComposite, memoryTFs));	
+		sdataCombo.addFocusListener(setComboListener(sdataCombo, aliasComposite, memoryTFs));
 		
 		int index = addPage(mainComposite);
 		setPageText(index, "Task");

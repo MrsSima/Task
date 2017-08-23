@@ -7,9 +7,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.eclipse.swt.widgets.FileDialog;
 
@@ -24,25 +27,50 @@ public class Info {
     
     public Map<String, String[]> Memory;
     
-    public String startupAlias;
-    public String textAlias;
-    public String dataAlias;
-    public String sdataAlias;
-    public String[] getAliases() { return new String[] 
-    		{this.startupAlias, this.textAlias, this.dataAlias, this.sdataAlias  }; }
+    private String startupAlias;
+    public String getStartupAlias() { return this.startupAlias; }
+    public void setStartupAlias(String startupAlias) 
+    { 
+    	this.startupAlias = startupAlias;
+    }
+    
+    private String textAlias;
+    public String getTextAlias() { return this.textAlias; }
+    public void setTextAlias(String textAlias) 
+    { 
+    	this.textAlias = textAlias;
+    }
+    
+    private String dataAlias;
+    public String getDataAlias() { return this.dataAlias; }
+    public void setDataAlias(String dataAlias) 
+    { 
+    	this.dataAlias = dataAlias;
+    }
+    
+    private String sdataAlias;
+    public String getSdataAlias() { return this.sdataAlias; }
+    public void setSdataAlias(String sdataAlias) 
+    { 
+    	this.sdataAlias = sdataAlias;
+    }
+    
     /*
      * Takes String[] { startup, text, data, sdata }
      */
-    public void setAliases(String[] aliases) 
+    public void setAliases(String startup, String text, String data, String sdata) 
     { 
-    	this.startupAlias = aliases[0]; 
-    	this.textAlias = aliases[1]; 
-    	this.dataAlias = aliases[2]; 
-    	this.sdataAlias = aliases[3]; 
+    	this.startupAlias = startup; 
+    	this.textAlias = text; 
+    	this.dataAlias = data; 
+    	this.sdataAlias = sdata; 
     }
     
     private Long stackTop;
-    public Long getStackTop() { return this.stackTop; }
+    public String getStackTop() 
+    { 
+    	return "0x" + fillHex(this.stackTop); 
+    }
     public void setStackTop(String stackTop) 
     {
     	if (stackTop!="")
@@ -52,7 +80,10 @@ public class Info {
     }
     
     private Long endHeap;
-    public Long getEndHeap() { return this.endHeap; }
+    public String getEndHeap() 
+    { 
+    	return "0x" + fillHex(this.endHeap); 
+    }
     public void setEndHeap(String endHeap) 
     { 
     	if (endHeap!="")
@@ -69,35 +100,17 @@ public class Info {
     public String getErrorText() {return this.errorText; }
     public void clearErrorText() { this.errorText = ""; };
     
-	public Info() {
-		
-	}
-	
-	public ArrayList<String> InfoToList()
+	public Info() {	}
+
+	public void CreateFromFile()
 	{
-		ArrayList<String> result = new ArrayList<String>();
-		result.add("/* " + this.getTitle() + " */");
-		result.add("");
-		result.add("MEMORY\r\n{");
-		for(Entry<String, String[]> memoryElement: this.Memory.entrySet())
-		{
-			result.add("\t" + memoryElement.getKey() + " : ORIGIN = " 
-					+ memoryElement.getValue()[0] + ", LENGTH = " + memoryElement.getValue()[1]);
-		}
-		result.add("}");
-		result.add("");
-		result.add("REGION_ALIAS(\"startup\", " + this.getAliases()[0] + ")");
-		result.add("REGION_ALIAS(\"text\", " + this.getAliases()[1] + ")");
-		result.add("REGION_ALIAS(\"data\", " + this.getAliases()[2] + ")");
-		result.add("REGION_ALIAS(\"sdata\", " + this.getAliases()[3] + ")");
-		result.add("");
-		result.add("PROVIDE (__stack_top = (0x" + fillHex(this.stackTop) + " & -4) );");
-		result.add("PROVIDE (__end_heap = (0x" + fillHex(this.endHeap) + ") );");
-		return result;
+		getText();
+		parseFile();
 	}
 	
 	public boolean CheckData()
 	{
+		Integer memoryDivider = 4*1024; //divider for memory origin and length
 		//Title check
 		if (title == "") 
 		{
@@ -117,6 +130,18 @@ public class Info {
 			} 
 			else 
 			{
+				//is name correct?
+				if (!isLatinLetter(memoryElement.getKey().charAt(0)))
+				{
+					this.errorText = "First letter of memory name shall be a latin letter";
+					return false;
+				}
+				if (!memoryElement.getKey().matches("[a-zA-Z0-9]*"))
+				{
+					this.errorText = "Memory name shall contain only latin letters and numbers";
+					return false;
+				}
+				Long decValue = null;
 				//is it normal size?
 				if (memoryElement.getValue()[0].length()>10)
 				{
@@ -126,7 +151,7 @@ public class Info {
 				//is it dec or hexdec? write hex string to memory map
 				try
 				{
-					Long decValue = decFromString(memoryElement.getValue()[0]);
+					decValue = decFromString(memoryElement.getValue()[0]);
 					String newOrigin = "0x" + fillHex(decValue);
 					this.Memory.put(memoryElement.getKey(), 
 							new String[] { newOrigin, memoryElement.getValue()[1] });
@@ -136,15 +161,22 @@ public class Info {
 					this.errorText = "All adresses must be decimal or hexadecimal (error in memory adresses)";
 					return false;
 				}
+				if (!isMultiple(decValue, memoryDivider))
+				{
+					this.errorText = "Memory origin shall be a multiple of 4K";
+					return false;
+				}
 				//is length format right?
+				Long decLength = null;
 				String currentLength = memoryElement.getValue()[1];
 				Character memoryUnit = currentLength.charAt(currentLength.length()-1);
-				List<Character> memoryUnits = Arrays.asList('g', 'G', 'm', 'M', 'k', 'K', 'Ì', 'ê', 'Ê', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9');
+				List<Character> memoryUnits = Arrays.asList('g', 'G', 'm', 'M', 'k', 'K', 'Ì', 'ê', 'Ê', 
+												'0', '1', '2', '3', '4', '5', '6', '7', '8', '9');
 				if (!memoryUnits.contains(memoryUnit)) 
 						
 				{
 					this.errorText = 
-							"Wrong memory length unit. Length must be not specified, or "
+							"Wrong memory length unit. Length must be not specified, or \r\n"
 							+ "specified as K (kilobites), M (megabyte) or G (gigabyte)";
 					return false;
 				}
@@ -164,17 +196,54 @@ public class Info {
 					}
 					else
 					{
-						currentLength = currentLength + "B";
+						    decLength = decFromString(currentLength);
+							if (isMultiple(decLength, memoryDivider))
+							{
+								currentLength = decLength + "B";
+							}
+							else 
+							{
+								this.errorText = "Memory length shall be a multiple of 4K";
+								return false;
+							}
 					}
 				}
 				try 
 				{
-					Integer.parseInt(currentLength.substring(0, currentLength.length()-1));
+					Long.parseLong(currentLength.substring(0, currentLength.length()-1));
+					decLength = decFromString(currentLength.substring(0, currentLength.length()-1));
 				}
 				catch(Exception ex)
 				{
 					this.errorText = 
-							"The value of length shall be numerical with designation of the size at the end (ex. 32K)";
+							"The value of length shall be numerical, up to 9223372036854775807 \r\n"
+							+ "and may have a designation of the size at the end (ex. 32K)";
+					return false;
+				}
+				try 
+				{
+					long decMemoryUnit = 0;
+					switch (Character.toUpperCase(currentLength.charAt(currentLength.length()-1)))
+					{
+						case 'B': decMemoryUnit = 1;
+	  		  				      break;
+						case 'K': decMemoryUnit = 1024;
+								  break;
+						case 'M': decMemoryUnit = 1024*1024;
+						  		  break;
+						case 'G': decMemoryUnit = 1024*1024*1024;
+				  		  		  break;
+					}
+					Long value = decLength*decMemoryUnit;
+					if (value>Math.pow(2, 32))
+					{
+						this.errorText = "The section must fit into the 32-bit address space";
+						return false;
+					}
+				}
+				catch(Exception ex)
+				{
+					this.errorText = "The section must fit into the 32-bit address space";
 					return false;
 				}
 			}
@@ -239,7 +308,8 @@ public class Info {
 							||(this.endHeap<origin)||(this.endHeap>origin + memoryLength))
 					{
 						this.errorText = 
-								"Predefined characters values shall be located in section of memory data alias is attached to";
+								"Predefined characters values shall be located in \r\n"
+								+ "section of memory data alias is attached to";
 						return false;
 					}
 					
@@ -251,6 +321,198 @@ public class Info {
 			}
 		}
 		return true;
+	}
+
+	public ArrayList<String> InfoToList()
+	{
+		ArrayList<String> result = new ArrayList<String>();
+		result.add("/* " + this.getTitle() + " */");
+		result.add("");
+		result.add("MEMORY\r\n{");
+		for(Entry<String, String[]> memoryElement: this.Memory.entrySet())
+		{
+			result.add("\t" + memoryElement.getKey() + " : ORIGIN = " 
+					+ memoryElement.getValue()[0] + ", LENGTH = " + memoryElement.getValue()[1]);
+		}
+		result.add("}");
+		result.add("");
+		result.add("REGION_ALIAS(\"startup\", " + this.startupAlias + ")");
+		result.add("REGION_ALIAS(\"text\", " + this.textAlias + ")");
+		result.add("REGION_ALIAS(\"data\", " + this.dataAlias + ")");
+		result.add("REGION_ALIAS(\"sdata\", " + this.sdataAlias + ")");
+		result.add("");
+		result.add("PROVIDE (__stack_top = (0x" + fillHex(this.stackTop) + " & -4) );");
+		result.add("PROVIDE (__end_heap = (0x" + fillHex(this.endHeap) + ") );");
+		return result;
+	}
+	
+	public void SaveFile() 
+	{
+		FileDialog fileDialog = new FileDialog(org.eclipse.swt.widgets.Display.getCurrent().getActiveShell(),
+				org.eclipse.swt.SWT.SAVE); 
+		try 
+		{ 
+			Path file = Paths.get(fileDialog.open()); 
+			Files.write(file, this.getFileText(), Charset.forName("Unicode")); 
+		} 
+		catch (IOException ex) 
+		{ 
+			this.errorText = "File was not saved: " + ex.getMessage(); 
+		} 
+	}
+
+	/*
+	 * Opens file dialog and fills this.fileText with text from opened file
+	 */
+	private void getText()
+	{
+		List<String> list = new ArrayList<String>();
+		FileDialog fileDialog = new FileDialog(org.eclipse.swt.widgets.Display.getCurrent().getActiveShell(),
+				org.eclipse.swt.SWT.OPEN); 
+		try 
+		{ 
+			Path file = Paths.get(fileDialog.open()); 
+			list = Files.readAllLines(file, Charset.forName("Unicode"));
+		} 
+		catch (IOException ex) 
+		{ 
+			this.errorText = "File was not saved: " + ex.getMessage(); 
+		} 
+		fileText = (ArrayList<String>) list;
+	}
+	
+	/*
+	 * Parses this.fileText
+	 */
+	private void parseFile()
+	{
+		this.Memory = new HashMap<String, String[]>();
+		Pattern pattern;
+		Matcher matcher;
+		this.title = "";
+		this.stackTop = (long) 0;
+		this.endHeap = (long) 0;
+		this.startupAlias = "";
+		this.textAlias = "";
+		this.dataAlias = "";
+		this.sdataAlias = "";
+		
+		for(String line: this.fileText)
+		{
+			//Title?
+			if (line.matches("/\\*.*\\*/"))
+			{
+				pattern = Pattern.compile("/\\*(.*)\\*/");
+				matcher = pattern.matcher(line);
+				if (matcher.find())
+				{
+					   this.title = matcher.group(1).trim();
+				}
+				continue;
+			}
+			
+			//Memory?
+			if (line.matches(".*:.*ORIGIN.*=.*,.*LENGTH.*=.*"))
+			{
+				String name = "";
+				String origin = "";
+				String length = "";
+					
+				pattern = Pattern.compile("(.*):");
+				matcher = pattern.matcher(line);
+				if (matcher.find())
+				{
+					name = matcher.group(1).trim();
+				}
+	
+				pattern = Pattern.compile(".*ORIGIN.*=(.*),.*");
+				matcher = pattern.matcher(line);
+				if (matcher.find())
+				{
+					origin = matcher.group(1).trim();
+				}
+					
+				pattern = Pattern.compile(".*LENGTH.*=(.*)$");
+				matcher = pattern.matcher(line);
+				if (matcher.find())
+				{
+					length = matcher.group(1).trim();
+				}
+				this.Memory.put(name, new String[] { origin, length });
+				continue;
+			}
+			
+			//Alias?
+			if (line.matches(".*REGION_ALIAS.*\\(.*\".*\".*,.*\\)"))
+			{
+				String value = "";
+				pattern = Pattern.compile(".*REGION_ALIAS.*\\(.*,(.*)\\)$");
+				matcher = pattern.matcher(line);
+				if (matcher.find())
+				{
+					value = matcher.group(1).trim();
+					if (line.matches(".*REGION_ALIAS.*\\(.*\".*startup.*\".*,.*\\)"))
+					{
+						this.startupAlias = value;
+					}
+					else if (line.matches(".*REGION_ALIAS.*\\(.*\".*text.*\".*,.*\\)"))
+					{
+						this.textAlias = value;
+					}
+					else if (line.matches(".*REGION_ALIAS.*\\(.*\"data.*\".*,.*\\)"))
+					{
+						this.dataAlias = value;
+					}
+					else if (line.matches(".*REGION_ALIAS.*\\(.*\".*sdata.*\".*,.*\\)"))
+					{
+						this.sdataAlias = value;
+					}
+				}
+				continue;
+			}
+			
+			//Predefined characters?
+			if (line.matches(".*PROVIDE.*(.*=.*(.*).*).*"))
+			{
+				String value = "";
+				if (line.matches(".*PROVIDE.*\\(.*__stack_top.*=.*\\(.*&.*\\).*\\).*"))
+				{
+					try 
+					{
+						pattern = Pattern.compile(".*PROVIDE.*\\(.*=.*\\((.*)&.*\\).*\\).*");
+						matcher = pattern.matcher(line);
+						if (matcher.find()) 
+						{
+							value = matcher.group(1).trim();
+							this.stackTop = decFromString(value);
+						}
+					}
+					catch(Exception ex)
+					{
+						this.errorText = ex.getMessage();
+					}
+				}
+				else if (line.matches(".*PROVIDE.*(.*__end_heap.*=.*(.*).*).*"))
+					{
+						try 
+						{
+							pattern = Pattern.compile(".*PROVIDE.*\\(.*=.*\\((.*)\\).*\\).*");
+							matcher = pattern.matcher(line);
+							if (matcher.find()) 
+							{
+								value = matcher.group(1).trim();
+								this.stackTop = decFromString(value);
+							}
+						}
+						catch(Exception ex)
+						{
+							this.errorText = ex.getMessage();
+						}
+						
+					}
+				continue;
+			}
+		}
 	}
 	
 	/*
@@ -271,33 +533,40 @@ public class Info {
 		}
 		catch(Exception ex)
 		{
-			this.errorText = "Non-valid predefined characters addresses. All adresses must be decimal or hexadecimal";
+			this.errorText = "Non-valid predefined characters addresses. All adresses must be decimal or hexadecimal\r\nand be up to 9223372036854775807 in dec";
 			return null;
 		}
 	}
 	
+	/*
+	 * Checks if char is a latin letter
+	 */
+	private boolean isLatinLetter(char c) {
+	    return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+	}
+	
+	/*
+	 * Checks if value is multiple of 4K
+	 */
+	private boolean isMultiple(Long number, Integer divider)
+	{
+		long result = number & divider;
+		return (result==0);
+	}
 	/*
 	 * fillHex method adds zeros to the beginning of input address
 	 */
 	private String fillHex(Long decValue)
 	{
 		String hexValue = Long.toHexString(decValue);
-		return ("00000000" + hexValue).substring(hexValue.length());
-	}
-	
-	public void SaveFile() 
-	{
-		FileDialog fileDialog = new FileDialog(org.eclipse.swt.widgets.Display.getCurrent().getActiveShell(),
-				org.eclipse.swt.SWT.SAVE); 
-		try 
-		{ 
-			Path file = Paths.get(fileDialog.open()); 
-			Files.write(file, this.getFileText(), Charset.forName("Unicode")); 
-		} 
-		catch (IOException ex) 
-		{ 
-			this.errorText = "File was not saved: " + ex.getMessage(); 
-		} 
+		if (hexValue.length()<=8)
+		{
+			return ("00000000" + hexValue).substring(hexValue.length());
+		}
+		else 
+		{
+			return hexValue;
+		}
 	}
 }
 
