@@ -201,7 +201,7 @@ public class Info {
 		
 		//Predefined characters check
 		//is it filled?
-		if ((this.stackTop==0)||(this.endHeap==0))
+		if ((this.stackTop==null)||(this.endHeap==null))
 		{
 			this.errorText = "Please, fill all of the precharacters fields";
 			return false;
@@ -262,15 +262,7 @@ public class Info {
 		{
 			if (string.toLowerCase().matches("0x[0-9a-f]+"))
 			{
-				if (string.length()<10) 
-				{
-					int degree = (int)Math.pow(10, 8-(string.length() - 2));
-					return Long.parseLong(string.substring(2), 16) * degree;
-				}
-				else
-				{
 					return Long.parseLong(string.substring(2), 16);
-				}
 			}
 			else
 			{
