@@ -1,10 +1,5 @@
 package org.plugin.task.editors;
 
-import java.io.IOException;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -13,8 +8,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import org.eclipse.swt.widgets.FileDialog;
 
 public class Info {
 	
@@ -94,7 +87,7 @@ public class Info {
     
     private ArrayList<String> fileText;
     public ArrayList<String> getFileText() { return this.fileText; }
-    public void setFileText(ArrayList<String> fileText) { this.fileText = fileText; }
+    public void setFileText(ArrayList<String> list) { this.fileText = list; }
     
     private String errorText;
     public String getErrorText() {return this.errorText; }
@@ -104,7 +97,6 @@ public class Info {
 
 	public void CreateFromFile()
 	{
-		getText();
 		parseFile();
 	}
 	
@@ -345,42 +337,7 @@ public class Info {
 		result.add("PROVIDE (__end_heap = (0x" + fillHex(this.endHeap) + ") );");
 		return result;
 	}
-	
-	public void SaveFile() 
-	{
-		FileDialog fileDialog = new FileDialog(org.eclipse.swt.widgets.Display.getCurrent().getActiveShell(),
-				org.eclipse.swt.SWT.SAVE); 
-		try 
-		{ 
-			Path file = Paths.get(fileDialog.open()); 
-			Files.write(file, this.getFileText(), Charset.forName("Unicode")); 
-		} 
-		catch (IOException ex) 
-		{ 
-			this.errorText = "File was not saved: " + ex.getMessage(); 
-		} 
-	}
 
-	/*
-	 * Opens file dialog and fills this.fileText with text from opened file
-	 */
-	private void getText()
-	{
-		List<String> list = new ArrayList<String>();
-		FileDialog fileDialog = new FileDialog(org.eclipse.swt.widgets.Display.getCurrent().getActiveShell(),
-				org.eclipse.swt.SWT.OPEN); 
-		try 
-		{ 
-			Path file = Paths.get(fileDialog.open()); 
-			list = Files.readAllLines(file, Charset.forName("Unicode"));
-		} 
-		catch (IOException ex) 
-		{ 
-			this.errorText = "File was not saved: " + ex.getMessage(); 
-		} 
-		fileText = (ArrayList<String>) list;
-	}
-	
 	/*
 	 * Parses this.fileText
 	 */

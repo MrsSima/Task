@@ -3,6 +3,11 @@ package org.plugin.task.editors;
 
 import java.util.List;
 import java.util.Map.Entry;
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -23,6 +28,7 @@ import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.*;
@@ -53,7 +59,7 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 	 */
 	void createPage() 
 	{
-		Composite mainComposite = new Composite(getContainer(), SWT.NONE);
+		Composite mainComposite = new Composite(getContainer(), SWT.V_SCROLL);
 		GridLayout oneColumnLayout = new GridLayout(1, false);
 		GridLayout doubleColumnLayout = new GridLayout(2, false);
 		GridLayout tripleColumnLayout = new GridLayout(3, false);
@@ -148,9 +154,6 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 		Composite saveComposite = new Composite(mainComposite, SWT.NONE);
 		saveComposite.setLayout(oneColumnLayout);
 		Button saveButton = new Button(saveComposite, SWT.NONE);
-		//GridData SaveGD = new GridData(GridData.BEGINNING);
-		//SaveGD.horizontalSpan = 1;
-		//saveButton.setLayoutData(SaveGD);
 		saveButton.setText("Save file");
 		Label messageLabel = new Label(saveComposite, SWT.NONE);
 		messageLabel.setText("");
@@ -163,6 +166,7 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 	    		Info info = new Info();
 	    		try 
 	    		{
+	    			getText(info);
 	    			info.CreateFromFile();
 	    			clearPage();
 	    			fillPage(info);
@@ -181,6 +185,7 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 					}
 	    		}
 			}
+			
 			private void clearPage()
 			{
 				for(Text[] element: memoryTFs)
@@ -195,6 +200,27 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 				dataCombo.removeAll();
 				sdataCombo.removeAll();
 			}
+			
+			/*
+			 * Opens file dialog and fills this.fileText with text from opened file
+			 */
+			private void getText(Info info) throws Exception
+			{
+				List<String> list = new ArrayList<String>();
+				FileDialog fileDialog = new FileDialog(org.eclipse.swt.widgets.Display.getCurrent().getActiveShell(),
+						org.eclipse.swt.SWT.OPEN); 
+				try 
+				{ 
+					Path file = Paths.get(fileDialog.open()); 
+					list = Files.readAllLines(file, Charset.forName("Unicode"));
+				} 
+				catch (IOException ex) 
+				{ 
+					throw new Exception("File was not saved: " + ex.getMessage()); 
+				} 
+				info.setFileText((ArrayList<String>)list);
+			}
+			
 			private void fillPage(Info info)
 			{
 				titleText.setText(info.getTitle());
@@ -282,7 +308,7 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 						{
 							
 							info.setFileText(info.InfoToList());
-							info.SaveFile();
+							SaveFile(info);
 						}
 						else 
 						{
@@ -329,6 +355,19 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 					info.setStackTop(stackTopText.getText());
 					info.setEndHeap(endHeapText.getText());
 					return info;
+				
+			}
+			
+			public void SaveFile(Info info) throws IOException 
+			{
+				FileDialog fileDialog = new FileDialog(org.eclipse.swt.widgets.Display.getCurrent().getActiveShell(),
+						org.eclipse.swt.SWT.SAVE); 
+					Path file = Paths.get(fileDialog.open()); 
+					try {
+						Files.write(file, info.getFileText(), Charset.forName("Unicode"));
+					} catch (IOException e) {
+						throw e;
+					} 
 				
 			}
 			
