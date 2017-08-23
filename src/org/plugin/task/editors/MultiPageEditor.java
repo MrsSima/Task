@@ -32,18 +32,12 @@ import org.eclipse.ui.part.MultiPageEditorPart;
 import org.eclipse.ui.ide.IDE;
 import org.plugin.task.editors.Info;
 /**
- * An example showing how to create a multi-page editor.
- * This example has 3 pages:
- * <ul>
- * <li>page 0 contains a nested text editor.
- * <li>page 1 allows you to change the font used in page 2
- * <li>page 2 shows the words in page 0 in sorted order
- * </ul>
+ * Eclipse plugin for saving info in a specific form, based on multi-page editor
  */
 public class MultiPageEditor extends MultiPageEditorPart implements IResourceChangeListener
 {
 
-	/** The text editor used in page 0. */
+	/** The text editor which is not used */
 	private TextEditor editor;
 
 	/**
@@ -59,14 +53,13 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 	 */
 	void createPage() 
 	{
-        //TODO make page scrollable
 		Composite mainComposite = new Composite(getContainer(), SWT.NONE);
 		GridLayout oneColumnLayout = new GridLayout(1, false);
 		GridLayout doubleColumnLayout = new GridLayout(2, false);
 		GridLayout tripleColumnLayout = new GridLayout(3, false);
 		mainComposite.setLayout(oneColumnLayout);
 		
-		//Title
+		//Title & Load
 		Composite titleComposite = new Composite(mainComposite, SWT.NONE);
 		titleComposite.setLayout(oneColumnLayout);
 		Button loadButton = new Button(titleComposite, SWT.NONE);
@@ -204,7 +197,6 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 			}
 			private void fillPage(Info info)
 			{
-				//TODO
 				titleText.setText(info.getTitle());
 				for(Entry<String, String[]> memoryElement: info.Memory.entrySet())
 				{
@@ -229,6 +221,7 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 				mainComposite.pack();
 			}
 		});		
+		
 		plusButton.addSelectionListener(new SelectionAdapter() 
 		{
 			public void widgetSelected(SelectionEvent event) 
@@ -242,6 +235,7 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 	    		minusButton.setVisible(true);
 			}
 		});		
+		
 		minusButton.addSelectionListener(new SelectionAdapter() 
 		{
 			public void widgetSelected(SelectionEvent event) 
@@ -262,6 +256,7 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 				}
 			}
 		});	
+		
 		stackTopText.addModifyListener(new ModifyListener() 
 		{
 			public void modifyText(ModifyEvent arg0) 
@@ -271,6 +266,7 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 				saveComposite.pack(); 
 			}
 		});		
+		
 		saveButton.addSelectionListener(new SelectionAdapter() 
 		{
 			public void widgetSelected(SelectionEvent event) 
@@ -295,7 +291,7 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 					} 
 					catch (Exception ex) 
 					{
-						if (info.getErrorText()!="")
+						if (info.getErrorText()!=null)
 						{
 							messageLabel.setText(info.getErrorText());
 							info.clearErrorText();
@@ -309,10 +305,8 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 					}
 			}
 			
-			public Info CreateInfo()
+			public Info CreateInfo() throws Exception
 			{
-				try
-				{
 					Info info = new Info();
 					info.setTitle(titleText.getText());
 					info.Memory = new HashMap<String, String[]>();
@@ -321,21 +315,25 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 						String name = 	((Text) memoryInfo[0]).getText();
 						String[] originAndLength = new String[] 
 								{memoryInfo[1].getText(), memoryInfo[2].getText()};
-						info.Memory.put(name, originAndLength);
+						if (info.Memory.containsKey(name))
+						{
+							throw new Exception("Memory names should be different");
+						}
+						else
+						{
+							info.Memory.put(name, originAndLength);
+						}
 					}
 					info.setAliases(startupCombo.getText(), textCombo.getText(), 
 								dataCombo.getText(), sdataCombo.getText());
 					info.setStackTop(stackTopText.getText());
 					info.setEndHeap(endHeapText.getText());
 					return info;
-				}
-				catch(Exception ex)
-				{
-					throw ex;
-				}
+				
 			}
 			
 		});
+		
 		startupCombo.addFocusListener(setComboListener(startupCombo, aliasComposite, memoryTFs));
 		textCombo.addFocusListener(setComboListener(textCombo, aliasComposite, memoryTFs));	
 		dataCombo.addFocusListener(setComboListener(dataCombo, aliasComposite, memoryTFs));	
@@ -353,10 +351,13 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 		    	  for (Text[] memoryInfo: memoryTFs)
 		    	  {
 		    		    String name = memoryInfo[0].getText();
-						combo.add(name); 
-						combocomposite.layout();
-						combocomposite.pack();
+		    		    if (name!="")
+		    		    {
+		    		    	combo.add(name); 
+		    		    }
 		    	  }
+  		    	  combocomposite.layout();
+  		    	  combocomposite.pack();
 		      }
 
 			@Override
