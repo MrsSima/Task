@@ -18,7 +18,48 @@ public class Info {
     	this.title = title;
     }
     
-    public Map<String, String[]> Memory;
+    private Map<String, Memory> memories;
+    public Map<String, Memory> getMemories()
+    {
+    	return this.memories;
+    }
+    public void setMemories(Map<String, Memory> memories)
+    {
+    	this.memories = memories;
+    }
+    
+    /*
+	*Takes name, origin and length as strings
+	*/
+    public void addMemory(String name, String[] memoryData) throws Exception
+    {
+    	Memory memory = new Memory();
+    	try 
+    	{
+    		memory.setName(memoryData[0]);
+    		memory.setDecOrigin(decFromString(memoryData[1]));
+    		memory.setHexOrihin("0x" + fillHex(memory.getDecOrigin()));
+    		String canonicLength = getUnit(memoryData[2]);
+    		memory.setLength(Long.parseLong(canonicLength.substring(0, canonicLength.length()-1)));
+    		memory.setUnit(canonicLength.charAt(canonicLength.length()-1));
+			switch (memory.getUnit())
+			{
+				case 'B': memory.setDecUnit((long)1);
+		  				  break;
+				case 'K': memory.setDecUnit((long)1024);
+						  break;
+				case 'M': memory.setDecUnit((long)1024*1024);
+				  		  break;
+				case 'G': memory.setDecUnit((long)1024*1024*1024);
+		  		  		  break;
+			}
+    		this.memories.put(name, memory);
+    	}
+    	catch(Exception ex)
+    	{
+    		throw ex;
+    	}
+    }
     
     private String startupAlias;
     public String getStartupAlias() { return this.startupAlias; }
@@ -95,7 +136,7 @@ public class Info {
     
 	public Info() {	}
 
-	public void CreateFromFile()
+	public void CreateFromFile() throws Exception
 	{
 		parseFile();
 	}
@@ -111,11 +152,12 @@ public class Info {
 		}
 		
 		//Memory check
-		for(Entry<String, String[]> memoryElement: this.Memory.entrySet())
+		for(Entry<String, Memory> memoryElement: this.memories.entrySet())
 		{
+			Memory memory = memoryElement.getValue();
 			//is it filled?
-			if ((memoryElement.getKey()=="")||(memoryElement.getValue()[0]=="")
-					||(memoryElement.getValue()[1]==""))
+			if ((memoryElement.getKey()=="")||(memory.getHexOrigin()=="")
+					||(memory.getLength()==null))
 			{
 				this.errorText = "Please, fill all of the memory fields";
 				return false;
@@ -133,100 +175,22 @@ public class Info {
 					this.errorText = "Memory name shall contain only latin letters and numbers";
 					return false;
 				}
-				Long decValue = null;
 				//is it normal size?
-				if (memoryElement.getValue()[0].length()>10)
+				if (memory.getHexOrigin().length()>10)
 				{
 					this.errorText = "Too big memory origin value (up to 8 order in hex is permited)";
 					return false;
 				}
-				//is it dec or hexdec? write hex string to memory map
-				try
-				{
-					decValue = decFromString(memoryElement.getValue()[0]);
-					String newOrigin = "0x" + fillHex(decValue);
-					this.Memory.put(memoryElement.getKey(), 
-							new String[] { newOrigin, memoryElement.getValue()[1] });
-				}
-				catch(NumberFormatException nfe)
-				{
-					this.errorText = "All adresses must be decimal or hexadecimal (error in memory adresses)";
-					return false;
-				}
-				if (!isMultiple(decValue, memoryDivider))
+				//is it multiple of 4K?
+				if (!isMultiple(memory.getDecOrigin(), memoryDivider))
 				{
 					this.errorText = "Memory origin shall be a multiple of 4K";
 					return false;
 				}
-				//is length format right?
-				Long decLength = null;
-				String currentLength = memoryElement.getValue()[1];
-				Character memoryUnit = currentLength.charAt(currentLength.length()-1);
-				List<Character> memoryUnits = Arrays.asList('g', 'G', 'm', 'M', 'k', 'K', 'Ì', 'ê', 'Ê', 
-												'0', '1', '2', '3', '4', '5', '6', '7', '8', '9');
-				if (!memoryUnits.contains(memoryUnit)) 
-						
-				{
-					this.errorText = 
-							"Wrong memory length unit. Length must be not specified, or \r\n"
-							+ "specified as K (kilobites), M (megabyte) or G (gigabyte)";
-					return false;
-				}
-				else 
-				{
-					if ((Arrays.asList( 'g', 'G' )).contains(memoryUnit))
-					{
-						currentLength = currentLength.substring(0, currentLength.length()-1) + "G";
-					}
-					else if ((Arrays.asList( 'm', 'M', 'Ì' )).contains(memoryUnit))
-					{
-						currentLength = currentLength.substring(0, currentLength.length()-1) + "M";
-					}
-					else if ((Arrays.asList('k', 'K', 'ê', 'Ê' )).contains(memoryUnit))
-					{
-						currentLength = currentLength.substring(0, currentLength.length()-1) + "K";
-					}
-					else
-					{
-						    decLength = decFromString(currentLength);
-							if (isMultiple(decLength, memoryDivider))
-							{
-								currentLength = decLength + "B";
-							}
-							else 
-							{
-								this.errorText = "Memory length shall be a multiple of 4K";
-								return false;
-							}
-					}
-				}
+				//Fits into 32-bit space address?
 				try 
 				{
-					Long.parseLong(currentLength.substring(0, currentLength.length()-1));
-					decLength = decFromString(currentLength.substring(0, currentLength.length()-1));
-				}
-				catch(Exception ex)
-				{
-					this.errorText = 
-							"The value of length shall be numerical, up to 9223372036854775807 \r\n"
-							+ "and may have a designation of the size at the end (ex. 32K)";
-					return false;
-				}
-				try 
-				{
-					long decMemoryUnit = 0;
-					switch (Character.toUpperCase(currentLength.charAt(currentLength.length()-1)))
-					{
-						case 'B': decMemoryUnit = 1;
-	  		  				      break;
-						case 'K': decMemoryUnit = 1024;
-								  break;
-						case 'M': decMemoryUnit = 1024*1024;
-						  		  break;
-						case 'G': decMemoryUnit = 1024*1024*1024;
-				  		  		  break;
-					}
-					Long value = decLength*decMemoryUnit;
+					Long value = memory.getDecOrigin() + memory.getDecUnit()*memory.getLength();
 					if (value>Math.pow(2, 32))
 					{
 						this.errorText = "The section must fit into the 32-bit address space";
@@ -252,8 +216,8 @@ public class Info {
 		else
 		{
 			//is data filled with right memory names?
-			if (!(this.Memory.containsKey(this.startupAlias)&&this.Memory.containsKey(this.textAlias)
-					&&this.Memory.containsKey(this.dataAlias)&&this.Memory.containsKey(this.sdataAlias)))
+			if (!(this.memories.containsKey(this.startupAlias)&&this.memories.containsKey(this.textAlias)
+					&&this.memories.containsKey(this.dataAlias)&&this.memories.containsKey(this.sdataAlias)))
 			{
 				this.errorText = "Alias fields must be filled with real memory data";
 				return false;
@@ -279,23 +243,9 @@ public class Info {
 			//are they in right memory section?
 			try
 			{
-					long origin = Long.parseLong(this.Memory.get(this.dataAlias)[0].substring(2), 16);
-					long memoryLength = 0;
-					int memoryUnits = 0;
-					String memoryLengthString = this.Memory.get(this.dataAlias)[1];
-					switch (Character.toUpperCase(memoryLengthString.charAt(memoryLengthString.length()-1)))
-					{
-						case 'B': memoryUnits = 1;
-	  		  				      break;
-						case 'K': memoryUnits = 1024;
-								  break;
-						case 'M': memoryUnits = 1024*1024;
-						  		  break;
-						case 'G': memoryUnits = 1024*1024*1024;
-				  		  		  break;
-					}
-					memoryLength =  
-							Long.parseLong(memoryLengthString.substring(0, memoryLengthString.length()-1)) * memoryUnits;
+					long origin = this.memories.get(this.dataAlias).getDecOrigin();
+					long memoryLength = this.memories.get(this.dataAlias).getLength() *
+							this.memories.get(this.dataAlias).getDecUnit();
 					if ((this.stackTop<origin)||(this.stackTop>origin + memoryLength)
 							||(this.endHeap<origin)||(this.endHeap>origin + memoryLength))
 					{
@@ -321,10 +271,11 @@ public class Info {
 		result.add("/* " + this.getTitle() + " */");
 		result.add("");
 		result.add("MEMORY\r\n{");
-		for(Entry<String, String[]> memoryElement: this.Memory.entrySet())
+		for(Entry<String, Memory> memoryElement: this.memories.entrySet())
 		{
 			result.add("\t" + memoryElement.getKey() + " : ORIGIN = " 
-					+ memoryElement.getValue()[0] + ", LENGTH = " + memoryElement.getValue()[1]);
+					+ memoryElement.getValue().getHexOrigin() + ", LENGTH = " + 
+					memoryElement.getValue().getLength() + memoryElement.getValue().getUnit());
 		}
 		result.add("}");
 		result.add("");
@@ -341,9 +292,9 @@ public class Info {
 	/*
 	 * Parses this.fileText
 	 */
-	private void parseFile()
+	private void parseFile() throws Exception
 	{
-		this.Memory = new HashMap<String, String[]>();
+		this.memories = new HashMap<String, Memory>();
 		Pattern pattern;
 		Matcher matcher;
 		this.title = "";
@@ -395,7 +346,7 @@ public class Info {
 				{
 					length = matcher.group(1).trim();
 				}
-				this.Memory.put(name, new String[] { origin, length });
+				this.addMemory(name, new String[] { name, origin, length });
 				continue;
 			}
 			
@@ -490,7 +441,8 @@ public class Info {
 		}
 		catch(Exception ex)
 		{
-			this.errorText = "Non-valid predefined characters addresses. All adresses must be decimal or hexadecimal\r\nand be up to 9223372036854775807 in dec";
+			this.errorText = "All adresses must be decimal or hexadecimal\r\n"
+					+ "and be up to 9223372036854775807 in dec";
 			return null;
 		}
 	}
@@ -500,6 +452,52 @@ public class Info {
 	 */
 	private boolean isLatinLetter(char c) {
 	    return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+	}
+	
+	private String getUnit(String length) throws Exception
+	{
+		String currentLength = length;
+		Character memoryUnit = currentLength.charAt(currentLength.length()-1);
+		List<Character> memoryUnits = Arrays.asList('g', 'G', 'm', 'M', 'k', 'K', 'Ì', 'ê', 'Ê', 
+										'0', '1', '2', '3', '4', '5', '6', '7', '8', '9');
+		if (!memoryUnits.contains(memoryUnit)) 
+				
+		{
+			throw new Exception("Wrong memory length unit. Length must be not specified, or \r\n"
+					+ "specified as K (kilobites), M (megabyte) or G (gigabyte)");
+		}
+		else 
+		{
+			if ((Arrays.asList( 'g', 'G' )).contains(memoryUnit))
+			{
+				currentLength =  currentLength.substring(0, currentLength.length()-1) + "G";
+			}
+			else if ((Arrays.asList( 'm', 'M', 'Ì' )).contains(memoryUnit))
+			{
+				currentLength =  currentLength.substring(0, currentLength.length()-1) + "M";
+			}
+			else if ((Arrays.asList('k', 'K', 'ê', 'Ê' )).contains(memoryUnit))
+			{
+				currentLength =  currentLength.substring(0, currentLength.length()-1) + "K";
+			}
+			else
+			{
+				currentLength = decFromString(currentLength) + "B";
+			}
+			try 
+			{
+				Long value = Long.parseLong(currentLength.substring(0, currentLength.length()-1));
+				if (value<=0)
+				{
+					throw new Exception("Length value shall be positive :)");
+				}
+			}
+			catch(Exception ex)
+			{
+				throw new Exception("Length value shall be numerical (in hex or dec)");
+			}
+			return currentLength;
+		}
 	}
 	
 	/*

@@ -59,7 +59,7 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 	 */
 	void createPage() 
 	{
-		Composite mainComposite = new Composite(getContainer(), SWT.V_SCROLL);
+		Composite mainComposite = new Composite(getContainer(), SWT.NONE);
 		GridLayout oneColumnLayout = new GridLayout(1, false);
 		GridLayout doubleColumnLayout = new GridLayout(2, false);
 		GridLayout tripleColumnLayout = new GridLayout(3, false);
@@ -89,6 +89,9 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 				"\r\n" + 
 				"PROVIDE (__stack_top = (0xBFFFFFFF & -4) );\r\n" + 
 				"PROVIDE (__end_heap = (0xBFFFFFFF) );");
+		Button clearButton = new Button(titleComposite, SWT.NONE);
+		clearButton.setText("Clear form");
+		
 		Label titleLabel = new Label(titleComposite, SWT.NONE);
 		titleLabel.setText("Title:");
 		Text titleText = new Text(titleComposite, SWT.NONE);
@@ -159,6 +162,38 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 		messageLabel.setText("");
 		
 		//Listeners
+		clearButton.addSelectionListener(new SelectionAdapter() 
+		{
+			public void widgetSelected(SelectionEvent event) 
+			{
+				titleText.setText("");
+				stackTopText.setText("");
+				endHeapText.setText("");
+				List<Text[]> memories = memoryTFs;
+				for(Text[] element: memories)
+	    		{
+						element[0].dispose();
+						element[1].dispose();
+						element[2].dispose();
+	    		}
+				memoryTFs.clear();
+				
+				Text name = new Text(memoryComposite, SWT.NONE);
+	    		Text origin = new Text(memoryComposite, SWT.NONE);
+	    		Text length = new Text(memoryComposite, SWT.NONE);
+	    		
+	    		memoryComposite.requestLayout();
+	    		memoryTFs.add(new Text[] { name, origin, length });
+	    		
+				startupCombo.removeAll();
+				textCombo.removeAll();
+				dataCombo.removeAll();
+				sdataCombo.removeAll();
+				mainComposite.layout();
+				mainComposite.pack();
+			}
+		});	
+		
 		loadButton.addSelectionListener(new SelectionAdapter() 
 		{
 			public void widgetSelected(SelectionEvent event) 
@@ -224,14 +259,15 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 			private void fillPage(Info info)
 			{
 				titleText.setText(info.getTitle());
-				for(Entry<String, String[]> memoryElement: info.Memory.entrySet())
+				for(Entry<String, Memory> memoryElement: info.getMemories().entrySet())
 				{
 					Text name = new Text(memoryComposite, SWT.NONE);
 		    		Text origin = new Text(memoryComposite, SWT.NONE);
 		    		Text length = new Text(memoryComposite, SWT.NONE);
 					name.setText(memoryElement.getKey());
-					origin.setText(memoryElement.getValue()[0]);
-					length.setText(memoryElement.getValue()[1]);
+					origin.setText(memoryElement.getValue().getHexOrigin());
+					length.setText(memoryElement.getValue().getLength() + 
+							Character.toString(memoryElement.getValue().getUnit()));
 		    		memoryTFs.add(new Text[] { name, origin, length });
 				}
 				startupCombo.add(info.getStartupAlias());
@@ -243,6 +279,7 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 				sdataCombo.add(info.getSdataAlias());
 				sdataCombo.select(0);
 				stackTopText.setText(info.getStackTop());
+				memoryComposite.layout();
 	    		mainComposite.layout();
 				mainComposite.pack();
 			}
@@ -335,19 +372,19 @@ public class MultiPageEditor extends MultiPageEditorPart implements IResourceCha
 			{
 					Info info = new Info();
 					info.setTitle(titleText.getText());
-					info.Memory = new HashMap<String, String[]>();
+					info.setMemories(new HashMap<String, Memory>());
 					for(Text[] memoryInfo: memoryTFs)
 					{
 						String name = 	((Text) memoryInfo[0]).getText();
 						String[] originAndLength = new String[] 
-								{memoryInfo[1].getText(), memoryInfo[2].getText()};
-						if (info.Memory.containsKey(name))
+								{memoryInfo[0].getText(), memoryInfo[1].getText(), memoryInfo[2].getText()};
+						if (info.getMemories().containsKey(name))
 						{
 							throw new Exception("Memory names should be different");
 						}
 						else
 						{
-							info.Memory.put(name, originAndLength);
+							info.addMemory(name, originAndLength);
 						}
 					}
 					info.setAliases(startupCombo.getText(), textCombo.getText(), 
